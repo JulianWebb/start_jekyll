@@ -1,0 +1,115 @@
+#!/bin/bash
+# script: start_jekyll
+# version: 0.1
+# creators: Julian Webb,
+
+script_name="start_jekyll"
+build_action="BUILD"
+serve_action="SERVE"
+help_action="HELP"
+action="${1^^}"
+environment_prefix="JEKYLL_"
+port_argument="PORT"
+port_default="4000"
+source_argument="SOURCE"
+source_default="./jekyll"
+version_argument="VERSION"
+version_default="latest"
+action_argument="ACTION"
+
+function help_argument_optional() {
+    echo "Arguments in [square brackets] are optional"
+}
+
+function help_argument_defaults() {
+    echo "Default argument values:"
+    for argument in "${!argument_array[@]}"
+    do
+        left="${argument}        "
+        echo "    ${left:0:12}=  ${argument_array[$argument]}"
+    done
+}
+
+function help_argument_environment() {
+    for argument in "${!argument_array[@]}"
+    do
+        arguments_message+="$environment_prefix$argument, "
+    done
+    arguments_message="${arguments_message::-2}"
+    echo "These can also be set as $arguments_message"
+    echo " and the script will use those instead in place of defaults" 
+
+}
+
+function help() {
+    help_argument_optional
+    help_argument_defaults
+    help_argument_environment
+}
+
+if [ "$action" == $build_action ]; then
+    echo "Starting Jekyll Build"
+
+    source=${2:-${JEKYLL_SOURCE:-$source_default}}
+    export JEKYLL_SOURCE=$source
+    echo "Using $source_argument: $source"
+
+    version=${3:-${JEKYLL_VERSION:-$version_default}}
+    export JEKYLL_VERSION=$version
+    echo "Using $version_argument: $version"
+
+    # Need to do this so docker-compose.yml is valid
+    export JEKYLL_PORT="6969"
+
+    # Need the folder created but don't want to show error if it already exists
+    mkdir $source 2> /dev/null
+
+    docker-compose up --remove-orphans jekyll-build 
+    docker-compose down
+elif [ "$action" == $serve_action ]; then
+    echo "Starting Jekyll Serve"
+
+    port=${2:-${JEKYLL_PORT:-$port_default}}
+    export JEKYLL_PORT=$port
+    echo "Using $port_argument: $port"
+
+    source=${3:-${JEKYLL_SOURCE:-$source_default}}
+    export JEKYLL_SOURCE=$source
+    echo "Using $source_argument: $source"
+
+    version=${4:-${JEKYLL_VERSION:-$version_default}}
+    export JEKYLL_VERSION=$version
+    echo "Using $version_argument: $version"
+
+    # Need the folder created but don't want to show error if it already exists
+    mkdir $source 2> /dev/null
+
+    docker-compose up --remove-orphans jekyll-serve
+    docker-compose down
+elif [ "$action" == $help_action ]; then
+
+    action_value="${2^^}"
+    if [ "$action_value" == $build_action ]; then
+        echo "$script_name $build_action [$source_argument] [$version_argument]"
+        declare -A argument_array=([$source_argument]=$source_default [$version_argument]=$version_default)
+        help
+
+    elif [ "$action_value" == $serve_action ]; then
+        echo "$script_name $serve_action [$port_argument] [$source_argument] [$version_argument]"
+        declare -A argument_array=([$port_argument]=$port_default [$source_argument]=$source_default [$version_argument]=$version_default)
+        help
+
+    elif [ "$action_value" == $help_action ]; then
+        echo "$script_name $help_action [$action_argument]"
+        echo "Though you probably already knew that ;)"
+
+    else
+        echo "Avaliable options are: $build_action, $serve_action, $help_action"
+        echo "Use '$script_name $help_action [$action_argument]' for more info on a specific action"
+        echo "Otherwise see README for more information"
+
+    fi
+else
+    echo "Avaliable options are: $build_action, $serve_action, $help_action"
+
+fi

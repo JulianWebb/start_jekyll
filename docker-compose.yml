@@ -1,0 +1,21 @@
+version: '3.3'
+
+services:
+  jekyll-serve:
+    image: jekyll/jekyll:${JEKYLL_VERSION}
+    ports:
+      - "${JEKYLL_PORT}:4000"
+    volumes:
+      - type: "bind"
+        source: "${JEKYLL_SOURCE}"
+        target: "/srv/jekyll"
+    restart: unless-stopped
+    command: ["jekyll", "serve"]
+  jekyll-build:
+    image: jekyll/jekyll:${JEKYLL_VERSION}
+    volumes:
+      - type: "bind"
+        source: "${JEKYLL_SOURCE}"
+        target: "/srv/jekyll"
+    restart: "no"
+    command: ["jekyll", "build"]
